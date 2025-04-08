@@ -102,25 +102,37 @@ class Application():
             for i in range(iter_times):
                 deblur = deblurs[i]
                 deblur = (deblur * 255).astype('uint8')
-                iter = self.iters[i]
-                io.imsave(os.path.join(self.config.application.deblurring_result_dir, 'deblur'+str(iter)+'_'+infos[1]),deblur)
-            print(f'file saved')
+                iter_num = self.iters[i]
+                
+                input_dir = os.path.dirname(deblurring_file_path)
+                original_filename = os.path.basename(deblurring_file_path)
+                name_part, ext_part = os.path.splitext(original_filename)
+                new_filename = f"{name_part}_deblur{iter_num}{ext_part}"
+                output_path = os.path.join(input_dir, new_filename)
+                io.imsave(output_path, deblur)
+                print(f"Saved: {output_path}")
         elif(deblurring_dir_path and os.path.exists(deblurring_dir_path)):
             self.__getData(deblurring_dir_path)
             index = 0
             for fileFullPath in self.__fileBlurList:
                 imageBlur,imageOrigin = self.__getImage(fileFullPath)
                 deblurs = self.__deblur(imageBlur,imageOrigin)
-                infos = os.path.basename(fileFullPath)
                 iter_times = len(deblurs)
                 for j in range(iter_times):
                     deblur = deblurs[j]
                     deblur = (deblur * 255).astype('uint8')
-                    iter = self.iters[j]
-                    io.imsave(os.path.join(self.config.application.deblurring_result_dir, 'deblur'+str(iter)+'_'+infos),deblur)
+                    iter_num = self.iters[j]
+                    
+                    input_dir = os.path.dirname(fileFullPath)
+                    original_filename = os.path.basename(fileFullPath)
+                    name_part, ext_part = os.path.splitext(original_filename)
+                    new_filename = f"{name_part}_deblur{iter_num}{ext_part}"
+                    output_path = os.path.join(input_dir, new_filename)
+                    io.imsave(output_path, deblur)
+                    print(f"Saved: {output_path}")
+
                 index += 1
                 print(f'{index}/{self.data_length} done!')
-            print(f'all saved')
         else:
             print(f"no deblur file(s)")
 
