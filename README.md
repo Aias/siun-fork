@@ -1,3 +1,9 @@
+**Note:** This repository has been forked from the original `minyuanye/SIUN`. The dependencies have been updated to be compatible with Python 3.12. These updates were almost entirely vibe-coded via Gemini 2.5 Pro, and I can't make any promises about similar results on machines besides my own.
+
+The readme below has been slightly modified to reflect these updates.
+
+---
+
 # Scale-Iterative Upscaling Network for Image Deblurring
 
 by Minyuan Ye, Dong Lyu and Gengsheng Chen<br>
