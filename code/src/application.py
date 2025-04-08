@@ -5,6 +5,11 @@ from skimage import io,transform,feature,color,img_as_float
 import numpy as np
 import math
 import time
+import cv2
+# import keras.backend as K # Old
+from tensorflow.keras import backend as K # New
+# from src.lib.data_helper import create_Gaussian_kernel # Unused import
+# from src.lib.data_helper import boundary_compensation # Unused import
 
 class Application():
 #note that input image must be color, gray image should be expand to 3 channels
@@ -54,7 +59,7 @@ class Application():
         print(f'total data:{self.data_length}!')
 
     def __deblur(self,imageBlur,imageOrigin):
-        pyramid = tuple(transform.pyramid_gaussian(imageBlur, downscale=2, max_layer=self.max_iter, multichannel=True))
+        pyramid = tuple(transform.pyramid_gaussian(imageBlur, downscale=2, max_layer=self.max_iter, channel_axis=-1))
         deblurs = []
         for iter in self.iters:
             batch_blur2x = []

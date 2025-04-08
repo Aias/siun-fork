@@ -1,10 +1,10 @@
 import os
 import tensorflow as tf
-from keras.layers import *
-from keras.initializers import glorot_uniform
-from keras.models import Sequential,Model,load_model
-from keras.layers.advanced_activations import LeakyReLU
-import keras.backend as K
+from tensorflow.keras.layers import *
+from tensorflow.keras.initializers import glorot_uniform
+from tensorflow.keras.models import Sequential, Model, load_model
+from tensorflow.keras.layers import LeakyReLU
+from tensorflow.keras import backend as K
 
 class DDModel:#Details Deblurring Model
 
@@ -83,51 +83,87 @@ class DDModel:#Details Deblurring Model
         return X
 
     def build_generator(self,input_shapeA,input_shapeB):#unet
-        if(self.load(self.config.resource.generator_json_path,self.config.resource.generator_weights_path)):
-            return self.model
-        else:#init
-            print(f'init network parameters')
-            inputsA = Input(input_shapeA,name='imageSmall')#None,None,6
-            inputsB = Input(input_shapeB,name='imageUp')#None,None,3
-            #layer 1
-            F_ = Conv2D(filters = 32, kernel_size = (3, 3), strides = (1,1), padding = 'same')(inputsA)#conv1
-            F_0 = self.__unet1(F_)#32
-            F_1 = self.__RDB(F_0,32,6,32)#RDB1
-            F_2 = self.__RDB(F_1,32,6,32)#RDB2
-            F_3 = self.__RDB(F_2,32,6,32)#RDB3
-            FF = concatenate([F_1, F_2,F_3], axis=3)
-            FdLF = Conv2D(filters = 32, kernel_size = (1, 1), strides = (1,1), padding = 'same')(FF)
-            FGF = Conv2D(filters = 32, kernel_size = (3, 3), strides = (1,1), padding = 'same')(FdLF)
-            FDF = Add()([FGF, F_])
-            us = Conv2D(filters = 32*4, kernel_size = (3, 3), strides = (1,1), padding = 'same')(FDF)
-            us = Lambda(lambda x: tf.depth_to_space(x,2))(us)#x2(upsample),32
-            d3 = Conv2D(filters = 3, kernel_size = (3, 3), strides = (1,1), padding = 'same')(us)
-            d3 = Activation('tanh')(d3)
-            d3 = Lambda(lambda x: x/2+0.5)(d3)
-            combined = concatenate([inputsB, d3], axis=3)#blur-generator,6
-            o2 = self.__unet2(combined)
-            model = Model(inputs=[inputsA,inputsB], outputs=o2, name='generator')
-            return model
+        # if(self.load(self.config.resource.generator_json_path,self.config.resource.generator_weights_path)):
+        #     return self.model
+        # else:#init
+        # Always build the model definition from code, then try loading weights later
+        print(f'Building network architecture from code...')
+        inputsA = Input(input_shapeA,name='imageSmall')#None,None,6
+        inputsB = Input(input_shapeB,name='imageUp')#None,None,3
+        #layer 1
+        F_ = Conv2D(filters = 32, kernel_size = (3, 3), strides = (1,1), padding = 'same')(inputsA)#conv1
+        F_0 = self.__unet1(F_)#32
+        F_1 = self.__RDB(F_0,32,6,32)#RDB1
+        F_2 = self.__RDB(F_1,32,6,32)#RDB2
+        F_3 = self.__RDB(F_2,32,6,32)#RDB3
+        FF = concatenate([F_1, F_2,F_3], axis=3)
+        FdLF = Conv2D(filters = 32, kernel_size = (1, 1), strides = (1,1), padding = 'same')(FF)
+        FGF = Conv2D(filters = 32, kernel_size = (3, 3), strides = (1,1), padding = 'same')(FdLF)
+        FDF = Add()([FGF, F_])
+        us = Conv2D(filters = 32*4, kernel_size = (3, 3), strides = (1,1), padding = 'same')(FDF)
+        
+        # Define output shape function for depth_to_space
+        def depth_to_space_shape(input_shape):
+            # input_shape = (batch, height, width, channels)
+            if None in input_shape[1:3]: # If height or width are None
+                return (input_shape[0], None, None, input_shape[3] // 4)
+            else:
+                 return (input_shape[0], input_shape[1] * 2, input_shape[2] * 2, input_shape[3] // 4)
 
-    def load(self, json_path, weights_path):
-        from keras.models import model_from_json
-        if os.path.exists(json_path) and os.path.exists(weights_path):
-            json_file = open(json_path, 'r')
-            loaded_model_json = json_file.read()
-            json_file.close()
-            self.model = model_from_json(loaded_model_json,custom_objects={'tf':tf})
-            # load weights into new model
-            self.model.load_weights(weights_path)
-            print("Loaded model from disk")
-            return True
+        # us = Lambda(lambda x: tf.depth_to_space(x,2), output_shape=depth_to_space_shape)(us)#x2(upsample),32
+        # Use tf.nn.depth_to_space for TF 2.x
+        us = Lambda(lambda x: tf.nn.depth_to_space(x,2), output_shape=depth_to_space_shape)(us)#x2(upsample),32
+        d3 = Conv2D(filters = 3, kernel_size = (3, 3), strides = (1,1), padding = 'same')(us)
+        d3 = Activation('tanh')(d3)
+        d3 = Lambda(lambda x: x/2+0.5)(d3)
+        combined = concatenate([inputsB, d3], axis=3)#blur-generator,6
+        o2 = self.__unet2(combined)
+        model = Model(inputs=[inputsA,inputsB], outputs=o2, name='generator')
+
+        # Attempt to load weights into the newly built model
+        weights_path = self.config.resource.generator_weights_path
+        if os.path.exists(weights_path):
+            print(f'Loading weights from {weights_path}...')
+            try:
+                model.load_weights(weights_path)
+                print("Loaded model weights from disk")
+            except Exception as e:
+                print(f"Error loading weights: {e}")
+                print("Proceeding with initialized weights.")
         else:
-            return False
+            print(f"Weights file not found at {weights_path}. Using initialized weights.")
+
+        return model
+
+    # def load(self, json_path, weights_path):
+    #     # from tensorflow.keras.models import model_from_json, Model # Import Model
+    #     if os.path.exists(json_path) and os.path.exists(weights_path):
+    #         # json_file = open(json_path, 'r')
+    #         # loaded_model_json = json_file.read()
+    #         # json_file.close()
+    #         # Pass Model class in custom_objects
+    #         # self.model = model_from_json(loaded_model_json,custom_objects={'tf':tf, 'Model': Model})
+    #         # load weights into new model
+    #         print(f"Loading weights from {weights_path}")
+    #         self.model.load_weights(weights_path)
+    #         print("Loaded model from disk")
+    #         return True
+    #     else:
+    #         return False
 
     def save(self, model, json_path, weights_path):
-        # serialize model to JSON
-        model_json = model.to_json()
-        with open(json_path, "w") as json_file:
-            json_file.write(model_json)
+        # serialize model to JSON - Deprecated for TF2/Keras3
+        # model_json = model.to_json()
+        # with open(json_path, "w") as json_file:
+        #     json_file.write(model_json)
         # serialize weights to HDF5
-        model.save_weights(weights_path)
-        print("Saved model to disk")
+        # Prefer saving the whole model in the new .keras format
+        keras_path = weights_path.replace(".h5", ".keras")
+        try:
+            model.save(keras_path)
+            print(f"Saved model to disk (new format): {keras_path}")
+            # Optionally save weights separately if needed
+            # model.save_weights(weights_path)
+            # print(f"Saved weights to disk (HDF5): {weights_path}")
+        except Exception as e:
+            print(f"Error saving model: {e}")

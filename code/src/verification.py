@@ -2,7 +2,7 @@ from src.model.model import DDModel
 from src.lib.data_producer import DataProducer
 from src.lib.data_helper import DataHelper
 import tensorflow as tf
-import keras.backend as K
+from tensorflow.keras import backend as K
 from keras.optimizers import RMSprop,Adam
 from skimage import io,transform,feature,color,img_as_float
 import numpy as np
@@ -11,6 +11,8 @@ from keras.utils.training_utils import multi_gpu_model
 import queue
 import threading
 import math
+import os
+import time
 
 class Verification():
     def __init__(self,config):

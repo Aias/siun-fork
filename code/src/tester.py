@@ -1,9 +1,12 @@
 import os
+import sys
+import numpy as np
 from src.model.model import DDModel
 from src.lib.data_helper import DataHelper
 from src.lib.MLVSharpnessMeasure import MLVMeasurement
-from skimage import io,transform #reize image
-import numpy as np
+from skimage import io,transform,feature,color,img_as_float
+# import keras.backend as K # Old
+from tensorflow.keras import backend as K # New
 import pickle
 import math
 

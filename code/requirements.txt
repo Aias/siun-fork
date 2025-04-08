@@ -1,4 +1,6 @@
-h5py==2.7.1
-tensorflow-gpu==1.4.0
-Keras==2.2.2
-scikit-image==0.14.3
+h5py>=3.0.0
+tensorflow>=2.10
+# Keras==2.2.2  # Removed, tf.keras is included in tensorflow package
+# scikit-image==0.14.3
+scikit-image # Allow latest version
+opencv-python # Added dependency for cv2 module

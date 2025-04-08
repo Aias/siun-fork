@@ -1,14 +1,15 @@
 from src.model.model import DDModel
 from src.lib.data_producer import DataProducer
 import tensorflow as tf
-import keras.backend as K
-from keras.optimizers import RMSprop,Adam
+from tensorflow.keras import backend as K
+from tensorflow.keras.optimizers import RMSprop,Adam
 from skimage import io,transform,feature,color
 import numpy as np
 import sys
 from keras.utils.training_utils import multi_gpu_model
 import queue
 import threading
+import os
 
 class Trainer():
     def __init__(self,config):

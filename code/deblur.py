@@ -2,7 +2,11 @@ import os
 import sys
 import argparse
 from src.config import Config
-from src.lib.tf_util import set_session_config
+from src.lib.tf_util import set_gpu_config
+import tensorflow as tf
+
+# Allow loading models with Lambda layers (unsafe but needed here)
+tf.keras.config.enable_unsafe_deserialization()
 
 _PATH_ = os.path.dirname(os.path.dirname(__file__))
 
@@ -36,7 +40,7 @@ if __name__ == "__main__":
         config.application.iter = args.iter
     if(args.result_dir):
         config.application.deblurring_result_dir = args.result_dir
-    set_session_config(per_process_gpu_memory_fraction=1, allow_growth=True, device_list=args.gpu)
+    set_gpu_config(allow_growth=True, device_list=args.gpu)
     gpus = args.gpu.split(",")
     config.trainer.gpu_num = len(gpus)
     if(args.train):
